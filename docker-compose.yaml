@@ -1,0 +1,100 @@
+services:
+  prometheus:
+    build:
+      context: ./containers/prometheus
+    container_name: measurepi-prometheus
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      INTERNET_PING_TARGET: ${INTERNET_PING_TARGET:-1.1.1.1}
+      HTTP_CHECK_URL: ${HTTP_CHECK_URL:-https://connectivitycheck.gstatic.com/generate_204}
+    volumes:
+      - ./data/prometheus:/prometheus
+      - ./prometheus/prometheus.yml.tmpl:/etc/prometheus/prometheus.yml.tmpl:ro
+
+  grafana:
+    image: grafana/grafana:11.1.5
+    container_name: measurepi-grafana
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GF_SECURITY_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD:-admin}
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/dashboards/measurepi-overview.json
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.25.0
+    container_name: measurepi-blackbox
+    network_mode: host
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/blackbox_exporter/blackbox.yml
+    volumes:
+      - ./blackbox/blackbox.yml:/etc/blackbox_exporter/blackbox.yml:ro
+
+  wifi-exporter:
+    build:
+      context: ./containers/wifi-exporter
+    container_name: measurepi-wifi-exporter
+    network_mode: host
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    environment:
+      WIFI_INTERFACE: ${WIFI_INTERFACE:-wlan0}
+      GATEWAY_TARGET: ${GATEWAY_TARGET:-}
+      INTERNET_PING_TARGET: ${INTERNET_PING_TARGET:-1.1.1.1}
+      HTTP_CHECK_URL: ${HTTP_CHECK_URL:-https://connectivitycheck.gstatic.com/generate_204}
+      EXPORTER_PORT: 9721
+      WIFI_EXPORTER_DATA_DIR: /data
+    volumes:
+      - ./data/wifi-exporter:/data
+
+  kernel-log-exporter:
+    build:
+      context: ./containers/kernel-log-exporter
+    container_name: measurepi-kernel-log-exporter
+    network_mode: host
+    restart: unless-stopped
+    privileged: true
+    environment:
+      EXPORTER_PORT: 9722
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: measurepi-node-exporter
+    network_mode: host
+    restart: unless-stopped
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/host/rootfs
+      - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run|var/lib/docker/.+)($|/)
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/rootfs:ro,rslave
+
+  smartctl-exporter:
+    image: quay.io/prometheuscommunity/smartctl-exporter:v0.14.0
+    container_name: measurepi-smartctl-exporter
+    profiles:
+      - smartctl
+    network_mode: host
+    restart: unless-stopped
+    privileged: true
+    command:
+      - --web.listen-address=:9633
+    volumes:
+      - /dev:/dev
+      - /run/udev:/run/udev:ro
+
+volumes:
+  grafana_data:

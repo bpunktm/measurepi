@@ -1,0 +1,49 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["127.0.0.1:9090"]
+
+  - job_name: wifi_exporter
+    static_configs:
+      - targets: ["127.0.0.1:9721"]
+
+  - job_name: kernel_log_exporter
+    static_configs:
+      - targets: ["127.0.0.1:9722"]
+
+  - job_name: node_exporter
+    static_configs:
+      - targets: ["127.0.0.1:9100"]
+
+
+  - job_name: blackbox_internet_icmp
+    metrics_path: /probe
+    params:
+      module: [icmp]
+    static_configs:
+      - targets: ["__INTERNET_PING_TARGET__"]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 127.0.0.1:9115
+
+  - job_name: blackbox_http
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets: ["__HTTP_CHECK_URL__"]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 127.0.0.1:9115
