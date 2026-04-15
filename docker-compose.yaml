@@ -52,6 +52,7 @@ services:
       GATEWAY_TARGET: ${GATEWAY_TARGET:-}
       INTERNET_PING_TARGET: ${INTERNET_PING_TARGET:-1.1.1.1}
       HTTP_CHECK_URL: ${HTTP_CHECK_URL:-https://connectivitycheck.gstatic.com/generate_204}
+      DNS_CHECK_HOST: ${DNS_CHECK_HOST:-connectivitycheck.gstatic.com}
       EXPORTER_PORT: 9721
       WIFI_EXPORTER_DATA_DIR: /data
     volumes:

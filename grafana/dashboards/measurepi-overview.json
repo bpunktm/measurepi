@@ -377,12 +377,12 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "wifi_disconnect_total",
+          "expr": "round(sum(increase(wifi_disconnect_total[$__range])))",
           "instant": true,
           "refId": "A"
         }
       ],
-      "title": "Disconnects",
+      "title": "Disconnects (Range)",
       "type": "stat"
     },
     {
@@ -440,12 +440,12 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "wifi_roam_total",
+          "expr": "round(sum(increase(wifi_roam_total[$__range])))",
           "instant": true,
           "refId": "A"
         }
       ],
-      "title": "Roams",
+      "title": "Roams (Range)",
       "type": "stat"
     },
     {
@@ -503,12 +503,12 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "wifi_gateway_unreachable_total",
+          "expr": "round(sum(increase(wifi_gateway_unreachable_total[$__range])))",
           "instant": true,
           "refId": "A"
         }
       ],
-      "title": "Gateway Outages",
+      "title": "Gateway Outages (Range)",
       "type": "stat"
     },
     {
@@ -566,12 +566,12 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "wifi_internet_unreachable_total",
+          "expr": "round(sum(increase(wifi_internet_unreachable_total[$__range])))",
           "instant": true,
           "refId": "A"
         }
       ],
-      "title": "Internet Outages",
+      "title": "Internet Outages (Range)",
       "type": "stat"
     },
     {
@@ -1235,8 +1235,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1331,8 +1330,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1421,8 +1419,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1483,8 +1480,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1563,6 +1559,6 @@
   "timezone": "",
   "title": "MeasurePi Overview",
   "uid": "measurepi-overview",
-  "version": 3,
+  "version": 4,
   "weekStart": ""
 }

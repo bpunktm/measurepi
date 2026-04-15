@@ -161,6 +161,7 @@ Es macht Folgendes:
 - laedt ein vorbereitetes Dashboard beim Start
 - setzt das MeasurePi-Dashboard als Standard-Startseite nach dem Login
 - zeigt dir die Diagnosemetriken direkt nach dem Hochfahren
+- provisioniert zusaetzlich ein zweites Dashboard `MeasurePi Logs` fuer juengste Ereignisse und Log-Kontext
 
 Warum das wichtig ist:
 

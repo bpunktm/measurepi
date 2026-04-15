@@ -3,6 +3,7 @@ import re
 import subprocess
 import time
 import json
+import socket
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -70,9 +71,12 @@ class WifiCollector:
             "HTTP_CHECK_URL",
             "https://connectivitycheck.gstatic.com/generate_204",
         )
+        self.dns_check_host = os.getenv("DNS_CHECK_HOST", "connectivitycheck.gstatic.com")
         self.data_dir = os.getenv("WIFI_EXPORTER_DATA_DIR", "/data")
         self.state_file = os.path.join(self.data_dir, "state.json")
         self.event_log_file = os.path.join(self.data_dir, "events.log")
+        self.max_recent_events = 12
+        self.recent_events: list[dict[str, object]] = []
         self.disconnect_total = 0.0
         self.roam_total = 0.0
         self.gateway_unreachable_total = 0.0
@@ -81,12 +85,19 @@ class WifiCollector:
         self.last_roam_ts = 0.0
         self.last_gateway_unreachable_ts = 0.0
         self.last_internet_unreachable_ts = 0.0
+        self.last_gateway_restored_ts = 0.0
+        self.last_internet_restored_ts = 0.0
+        self.last_gateway_outage_duration_seconds = 0.0
+        self.last_internet_outage_duration_seconds = 0.0
         self.previous_connected = False
         self.previous_bssid = ""
         self.previous_gateway_ok = True
         self.previous_internet_ok = True
+        self.gateway_outage_active_since = 0.0
+        self.internet_outage_active_since = 0.0
         self.ensure_data_dir()
         self.load_state()
+        self.load_recent_events()
 
     def ensure_data_dir(self) -> None:
         os.makedirs(self.data_dir, exist_ok=True)
@@ -106,6 +117,12 @@ class WifiCollector:
         self.last_roam_ts = float(payload.get("last_roam_ts", 0))
         self.last_gateway_unreachable_ts = float(payload.get("last_gateway_unreachable_ts", 0))
         self.last_internet_unreachable_ts = float(payload.get("last_internet_unreachable_ts", 0))
+        self.last_gateway_restored_ts = float(payload.get("last_gateway_restored_ts", 0))
+        self.last_internet_restored_ts = float(payload.get("last_internet_restored_ts", 0))
+        self.last_gateway_outage_duration_seconds = float(payload.get("last_gateway_outage_duration_seconds", 0))
+        self.last_internet_outage_duration_seconds = float(payload.get("last_internet_outage_duration_seconds", 0))
+        self.gateway_outage_active_since = float(payload.get("gateway_outage_active_since", 0))
+        self.internet_outage_active_since = float(payload.get("internet_outage_active_since", 0))
 
     def save_state(self) -> None:
         payload = {
@@ -117,6 +134,12 @@ class WifiCollector:
             "last_roam_ts": self.last_roam_ts,
             "last_gateway_unreachable_ts": self.last_gateway_unreachable_ts,
             "last_internet_unreachable_ts": self.last_internet_unreachable_ts,
+            "last_gateway_restored_ts": self.last_gateway_restored_ts,
+            "last_internet_restored_ts": self.last_internet_restored_ts,
+            "last_gateway_outage_duration_seconds": self.last_gateway_outage_duration_seconds,
+            "last_internet_outage_duration_seconds": self.last_internet_outage_duration_seconds,
+            "gateway_outage_active_since": self.gateway_outage_active_since,
+            "internet_outage_active_since": self.internet_outage_active_since,
         }
         tmp_file = f"{self.state_file}.tmp"
         try:
@@ -126,11 +149,34 @@ class WifiCollector:
         except OSError:
             return
 
-    def append_event(self, event_type: str, wifi: WifiSnapshot, timestamp: float) -> None:
+    def load_recent_events(self) -> None:
+        try:
+            with open(self.event_log_file, "r", encoding="utf-8") as handle:
+                lines = handle.readlines()[-self.max_recent_events :]
+        except OSError:
+            self.recent_events = []
+            return
+
+        events: list[dict[str, object]] = []
+        for line in lines:
+            try:
+                events.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+        self.recent_events = events[-self.max_recent_events :]
+
+    def append_event(
+        self,
+        event_type: str,
+        wifi: WifiSnapshot,
+        timestamp: float,
+        extra: Optional[dict[str, object]] = None,
+    ) -> None:
         payload = {
             "ts": timestamp,
             "ts_iso": datetime.fromtimestamp(timestamp, tz=timezone.utc).isoformat(),
             "event": event_type,
+            "details_available": "true",
             "interface": self.interface,
             "ssid": wifi.ssid,
             "bssid": wifi.bssid,
@@ -140,11 +186,15 @@ class WifiCollector:
             "rx_bitrate_mbps": wifi.rx_bitrate_mbps,
             "connected_seconds": wifi.connected_seconds,
         }
+        if extra:
+            payload.update(extra)
         try:
             with open(self.event_log_file, "a", encoding="utf-8") as handle:
                 handle.write(json.dumps(payload, sort_keys=True) + "\n")
         except OSError:
             return
+        self.recent_events.append(payload)
+        self.recent_events = self.recent_events[-self.max_recent_events :]
 
     def current_gateway(self) -> str:
         if self.gateway_target:
@@ -203,6 +253,45 @@ class WifiCollector:
         match = re.search(r"time=(\d+(\.\d+)?)\s*ms", output)
         return 1, float(match.group(1)) if match else 0.0
 
+    def gateway_arp_reachable(self, gateway: str) -> int:
+        if not gateway:
+            return 0
+        code, output = shell(["ip", "neigh", "show", gateway, "dev", self.interface])
+        if code != 0:
+            return 0
+        normalized = output.strip().upper()
+        if not normalized:
+            return 0
+        if "FAILED" in normalized or "INCOMPLETE" in normalized:
+            return 0
+        return 1 if "LLADDR" in normalized or "REACHABLE" in normalized or "STALE" in normalized or "DELAY" in normalized else 0
+
+    def dns_check(self) -> tuple[int, float]:
+        started = time.time()
+        try:
+            socket.getaddrinfo(self.dns_check_host, None)
+        except socket.gaierror:
+            return 0, time.time() - started
+        return 1, time.time() - started
+
+    def classify_gateway_reason(self, wifi: WifiSnapshot, gateway_arp_ok: int) -> str:
+        if not wifi.connected:
+            return "wifi_disconnected"
+        if not gateway_arp_ok:
+            return "gateway_arp_unreachable"
+        return "gateway_no_icmp_reply"
+
+    def classify_internet_reason(self, wifi: WifiSnapshot, gateway_ok: int, dns_ok: int, http_ok: int) -> str:
+        if not wifi.connected:
+            return "wifi_disconnected"
+        if not gateway_ok:
+            return "gateway_unreachable"
+        if not dns_ok:
+            return "dns_resolution_failed"
+        if not http_ok:
+            return "http_path_failed"
+        return "internet_ping_failed"
+
     def http_check(self) -> tuple[int, int, float]:
         code, output = shell(
             [
@@ -243,12 +332,12 @@ class WifiCollector:
         if self.previous_connected and not wifi.connected:
             self.disconnect_total += 1
             self.last_disconnect_ts = now
-            self.append_event("disconnect", wifi, now)
+            self.append_event("disconnect", wifi, now, {"gateway": gateway})
             state_changed = True
         if wifi.connected and self.previous_bssid and wifi.bssid and self.previous_bssid != wifi.bssid:
             self.roam_total += 1
             self.last_roam_ts = now
-            self.append_event("roam", wifi, now)
+            self.append_event("roam", wifi, now, {"gateway": gateway})
             state_changed = True
 
         self.previous_connected = wifi.connected
@@ -258,22 +347,93 @@ class WifiCollector:
             self.save_state()
 
         gateway_ok, gateway_ms = self.ping(gateway)
+        gateway_arp_ok = self.gateway_arp_reachable(gateway)
         internet_ok, internet_ms = self.ping(self.internet_ping_target)
+        dns_ok, dns_duration = self.dns_check()
         http_ok, http_status, http_duration = self.http_check()
 
         if self.previous_gateway_ok and not gateway_ok:
             self.gateway_unreachable_total += 1
             self.last_gateway_unreachable_ts = now
-            self.append_event("gateway_unreachable", wifi, now)
+            self.gateway_outage_active_since = now
+            self.append_event(
+                "gateway_unreachable",
+                wifi,
+                now,
+                {
+                    "gateway": gateway,
+                    "gateway_ping_ms": gateway_ms,
+                    "gateway_arp_reachable": gateway_arp_ok,
+                    "reason": self.classify_gateway_reason(wifi, gateway_arp_ok),
+                },
+            )
+            state_changed = True
+        if not self.previous_gateway_ok and gateway_ok:
+            outage_duration = max(0.0, now - self.gateway_outage_active_since) if self.gateway_outage_active_since else 0.0
+            self.last_gateway_restored_ts = now
+            self.last_gateway_outage_duration_seconds = outage_duration
+            self.gateway_outage_active_since = 0.0
+            self.append_event(
+                "gateway_restored",
+                wifi,
+                now,
+                {
+                    "gateway": gateway,
+                    "gateway_ping_ms": gateway_ms,
+                    "gateway_arp_reachable": gateway_arp_ok,
+                    "outage_duration_seconds": outage_duration,
+                    "reason": "gateway_recovered",
+                },
+            )
             state_changed = True
         if self.previous_internet_ok and not internet_ok:
             self.internet_unreachable_total += 1
             self.last_internet_unreachable_ts = now
-            self.append_event("internet_unreachable", wifi, now)
+            self.internet_outage_active_since = now
+            self.append_event(
+                "internet_unreachable",
+                wifi,
+                now,
+                {
+                    "gateway": gateway,
+                    "internet_target": self.internet_ping_target,
+                    "internet_ping_ms": internet_ms,
+                    "dns_check_host": self.dns_check_host,
+                    "dns_ok": dns_ok,
+                    "dns_duration_seconds": dns_duration,
+                    "http_ok": http_ok,
+                    "http_status": http_status,
+                    "reason": self.classify_internet_reason(wifi, gateway_ok, dns_ok, http_ok),
+                },
+            )
+            state_changed = True
+        if not self.previous_internet_ok and internet_ok:
+            outage_duration = max(0.0, now - self.internet_outage_active_since) if self.internet_outage_active_since else 0.0
+            self.last_internet_restored_ts = now
+            self.last_internet_outage_duration_seconds = outage_duration
+            self.internet_outage_active_since = 0.0
+            self.append_event(
+                "internet_restored",
+                wifi,
+                now,
+                {
+                    "gateway": gateway,
+                    "internet_target": self.internet_ping_target,
+                    "internet_ping_ms": internet_ms,
+                    "dns_check_host": self.dns_check_host,
+                    "dns_ok": dns_ok,
+                    "dns_duration_seconds": dns_duration,
+                    "outage_duration_seconds": outage_duration,
+                    "reason": "internet_recovered",
+                },
+            )
             state_changed = True
 
         self.previous_gateway_ok = bool(gateway_ok)
         self.previous_internet_ok = bool(internet_ok)
+
+        if state_changed:
+            self.save_state()
 
         channel = channel_from_frequency(wifi.frequency_mhz) if wifi.frequency_mhz else 0
 
@@ -320,21 +480,56 @@ class WifiCollector:
             "# HELP wifi_last_gateway_unreachable_timestamp_seconds Unix timestamp of the last observed gateway unreachable event.",
             "# TYPE wifi_last_gateway_unreachable_timestamp_seconds gauge",
             metric_line("wifi_last_gateway_unreachable_timestamp_seconds", self.last_gateway_unreachable_ts, {"interface": self.interface}),
+            "# HELP wifi_last_gateway_restored_timestamp_seconds Unix timestamp of the last observed gateway restored event.",
+            "# TYPE wifi_last_gateway_restored_timestamp_seconds gauge",
+            metric_line("wifi_last_gateway_restored_timestamp_seconds", self.last_gateway_restored_ts, {"interface": self.interface}),
+            "# HELP wifi_last_gateway_outage_duration_seconds Duration of the last completed gateway outage.",
+            "# TYPE wifi_last_gateway_outage_duration_seconds gauge",
+            metric_line("wifi_last_gateway_outage_duration_seconds", self.last_gateway_outage_duration_seconds, {"interface": self.interface}),
+            "# HELP wifi_gateway_outage_active_seconds Current duration of the active gateway outage, if any.",
+            "# TYPE wifi_gateway_outage_active_seconds gauge",
+            metric_line(
+                "wifi_gateway_outage_active_seconds",
+                max(0.0, now - self.gateway_outage_active_since) if self.gateway_outage_active_since else 0.0,
+                {"interface": self.interface},
+            ),
             "# HELP wifi_internet_unreachable_total Number of observed transitions from reachable to unreachable internet ping target.",
             "# TYPE wifi_internet_unreachable_total counter",
             metric_line("wifi_internet_unreachable_total", self.internet_unreachable_total, {"interface": self.interface, "target": self.internet_ping_target}),
             "# HELP wifi_last_internet_unreachable_timestamp_seconds Unix timestamp of the last observed internet unreachable event.",
             "# TYPE wifi_last_internet_unreachable_timestamp_seconds gauge",
             metric_line("wifi_last_internet_unreachable_timestamp_seconds", self.last_internet_unreachable_ts, {"interface": self.interface, "target": self.internet_ping_target}),
+            "# HELP wifi_last_internet_restored_timestamp_seconds Unix timestamp of the last observed internet restored event.",
+            "# TYPE wifi_last_internet_restored_timestamp_seconds gauge",
+            metric_line("wifi_last_internet_restored_timestamp_seconds", self.last_internet_restored_ts, {"interface": self.interface, "target": self.internet_ping_target}),
+            "# HELP wifi_last_internet_outage_duration_seconds Duration of the last completed internet outage.",
+            "# TYPE wifi_last_internet_outage_duration_seconds gauge",
+            metric_line("wifi_last_internet_outage_duration_seconds", self.last_internet_outage_duration_seconds, {"interface": self.interface, "target": self.internet_ping_target}),
+            "# HELP wifi_internet_outage_active_seconds Current duration of the active internet outage, if any.",
+            "# TYPE wifi_internet_outage_active_seconds gauge",
+            metric_line(
+                "wifi_internet_outage_active_seconds",
+                max(0.0, now - self.internet_outage_active_since) if self.internet_outage_active_since else 0.0,
+                {"interface": self.interface, "target": self.internet_ping_target},
+            ),
             "# HELP wifi_event_log_info Static info about the persistent event log location.",
             "# TYPE wifi_event_log_info gauge",
             metric_line("wifi_event_log_info", 1, {"interface": self.interface, "path": self.event_log_file}),
+            "# HELP wifi_gateway_arp_reachable 1 when the gateway currently resolves in ARP/neighbor cache.",
+            "# TYPE wifi_gateway_arp_reachable gauge",
+            metric_line("wifi_gateway_arp_reachable", gateway_arp_ok, {"interface": self.interface}),
             "# HELP wifi_gateway_reachable 1 when the default gateway responds to ICMP.",
             "# TYPE wifi_gateway_reachable gauge",
             metric_line("wifi_gateway_reachable", gateway_ok, {"interface": self.interface}),
             "# HELP wifi_gateway_ping_ms ICMP RTT to the default gateway in milliseconds.",
             "# TYPE wifi_gateway_ping_ms gauge",
             metric_line("wifi_gateway_ping_ms", gateway_ms, {"interface": self.interface}),
+            "# HELP wifi_dns_check_success 1 when the configured DNS hostname resolves successfully.",
+            "# TYPE wifi_dns_check_success gauge",
+            metric_line("wifi_dns_check_success", dns_ok, {"interface": self.interface, "host": self.dns_check_host}),
+            "# HELP wifi_dns_check_duration_seconds DNS resolution duration for the configured hostname.",
+            "# TYPE wifi_dns_check_duration_seconds gauge",
+            metric_line("wifi_dns_check_duration_seconds", dns_duration, {"interface": self.interface, "host": self.dns_check_host}),
             "# HELP wifi_internet_ping_reachable 1 when the internet ping target responds to ICMP.",
             "# TYPE wifi_internet_ping_reachable gauge",
             metric_line("wifi_internet_ping_reachable", internet_ok, {"interface": self.interface, "target": self.internet_ping_target}),
@@ -381,6 +576,44 @@ class WifiCollector:
                     ),
                 ]
             )
+
+        if self.recent_events:
+            lines.extend(
+                [
+                    "# HELP wifi_recent_event_timestamp_seconds Recent Wi-Fi related events with context labels.",
+                    "# TYPE wifi_recent_event_timestamp_seconds gauge",
+                ]
+            )
+            recent = list(reversed(self.recent_events))
+            for index, event in enumerate(recent, start=1):
+                labels = {
+                    "slot": str(index),
+                    "event": str(event.get("event", "")),
+                    "details_available": str(event.get("details_available", "false")),
+                    "interface": str(event.get("interface", "")),
+                    "ssid": str(event.get("ssid", "")),
+                    "bssid": str(event.get("bssid", "")),
+                    "gateway": str(event.get("gateway", "")),
+                    "internet_target": str(event.get("internet_target", "")),
+                    "dns_check_host": str(event.get("dns_check_host", "")),
+                    "dns_ok": str(event.get("dns_ok", "")),
+                    "http_ok": str(event.get("http_ok", "")),
+                    "reason": str(event.get("reason", "")),
+                    "outage_duration_seconds": str(event.get("outage_duration_seconds", "")),
+                    "gateway_arp_reachable": str(event.get("gateway_arp_reachable", "")),
+                    "signal_dbm": str(event.get("signal_dbm", "")),
+                    "frequency_mhz": str(event.get("frequency_mhz", "")),
+                    "tx_bitrate_mbps": str(event.get("tx_bitrate_mbps", "")),
+                    "rx_bitrate_mbps": str(event.get("rx_bitrate_mbps", "")),
+                    "ts_iso": str(event.get("ts_iso", "")),
+                }
+                lines.append(
+                    metric_line(
+                        "wifi_recent_event_timestamp_seconds",
+                        float(event.get("ts", 0)),
+                        labels,
+                    )
+                )
 
         return "\n".join(lines) + "\n"
 
