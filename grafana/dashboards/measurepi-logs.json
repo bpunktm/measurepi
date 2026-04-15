@@ -203,7 +203,27 @@
               "instance": true,
               "job": true
             },
-            "indexByName": {},
+            "indexByName": {
+              "When": 0,
+              "Event": 1,
+              "Reason Guess": 2,
+              "Details Ready": 3,
+              "Outage s": 4,
+              "Gateway": 5,
+              "ARP OK": 6,
+              "DNS OK": 7,
+              "HTTP OK": 8,
+              "BSSID / AP": 9,
+              "SSID": 10,
+              "Interface": 11,
+              "RSSI dBm": 12,
+              "TX Mbit/s": 13,
+              "RX Mbit/s": 14,
+              "Freq MHz": 15,
+              "DNS Host": 16,
+              "Internet Target": 17,
+              "Slot": 18
+            },
             "renameByName": {
               "bssid": "BSSID / AP",
               "details_available": "Details Ready",
@@ -233,8 +253,8 @@
             "fields": {},
             "sort": [
               {
-                "desc": false,
-                "field": "Slot"
+                "desc": true,
+                "field": "When"
               }
             ]
           }
@@ -429,14 +449,166 @@
               "instance": true,
               "job": true
             },
-            "indexByName": {},
+            "indexByName": {
+              "Metric": 0,
+              "Value": 1,
+              "Gateway": 2,
+              "Target": 3,
+              "Host": 4,
+              "Interface": 5
+            },
             "renameByName": {
+              "Value #A": "Value",
+              "Value #B": "Value",
+              "Value #C": "Value",
+              "Value #D": "Value",
+              "Value #E": "Value",
+              "Value #F": "Value",
               "Value": "Value",
               "__name__": "Metric",
               "gateway": "Gateway",
               "host": "Host",
               "interface": "Interface",
               "target": "Target"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "pps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 20
+      },
+      "id": 5,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "rate(tshark_arp_request_total[5m])",
+          "legendFormat": "ARP Requests",
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "rate(tshark_arp_reply_total[5m])",
+          "legendFormat": "ARP Replies",
+          "refId": "B"
+        },
+        {
+          "editorMode": "code",
+          "expr": "rate(tshark_dns_query_total[5m])",
+          "legendFormat": "DNS Queries",
+          "refId": "C"
+        },
+        {
+          "editorMode": "code",
+          "expr": "rate(tshark_dns_response_total[5m])",
+          "legendFormat": "DNS Responses",
+          "refId": "D"
+        }
+      ],
+      "title": "Client Traffic Hints",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 20
+      },
+      "id": 6,
+      "options": {
+        "showHeader": true
+      },
+      "pluginVersion": "11.1.5",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "tshark_exporter_capture_success",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "tshark_last_packet_timestamp_seconds",
+          "format": "table",
+          "instant": true,
+          "refId": "B"
+        },
+        {
+          "editorMode": "code",
+          "expr": "tshark_tcp_retransmission_total",
+          "format": "table",
+          "instant": true,
+          "refId": "C"
+        }
+      ],
+      "title": "Tshark Capture State",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": false,
+              "instance": true,
+              "job": true
+            },
+            "indexByName": {
+              "Metric": 0,
+              "Value": 1,
+              "Interface": 2
+            },
+            "renameByName": {
+              "Value #A": "Value",
+              "Value #B": "Value",
+              "Value #C": "Value",
+              "__name__": "Metric",
+              "Value": "Value",
+              "interface": "Interface"
             }
           }
         }
@@ -491,7 +663,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 20
+        "y": 28
       },
       "id": 3,
       "options": {
@@ -576,8 +748,19 @@
               "instance": true,
               "job": true
             },
-            "indexByName": {},
+            "indexByName": {
+              "Metric": 0,
+              "When": 1
+            },
             "renameByName": {
+              "Value #A": "When",
+              "Value #B": "When",
+              "Value #C": "When",
+              "Value #D": "When",
+              "Value #E": "When",
+              "Value #F": "When",
+              "Value #G": "When",
+              "Value #H": "When",
               "Value": "When",
               "__name__": "Metric"
             }

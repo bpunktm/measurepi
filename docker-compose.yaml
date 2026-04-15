@@ -58,6 +58,19 @@ services:
     volumes:
       - ./data/wifi-exporter:/data
 
+  tshark-exporter:
+    build:
+      context: ./containers/tshark-exporter
+    container_name: measurepi-tshark-exporter
+    network_mode: host
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    environment:
+      WIFI_INTERFACE: ${WIFI_INTERFACE:-wlan0}
+      EXPORTER_PORT: 9723
+
   kernel-log-exporter:
     build:
       context: ./containers/kernel-log-exporter
