@@ -1,0 +1,1022 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 99,
+      "options": {
+        "content": "Scope: fokussierte Betriebsansicht fuer UXG Pro und die beiden Switches. Dieses Dashboard priorisiert physische Ports, Uplink-Kandidaten, benannte Ports und Fehleraktivitaet statt moeglichst vollstaendiger Interface-Abdeckung.",
+        "mode": "markdown"
+      },
+      "pluginVersion": "11.1.5",
+      "title": "Scope",
+      "type": "text"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "text": "Down"
+                },
+                "1": {
+                  "text": "Up"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 3
+      },
+      "id": 1,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.1.5",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum(max by (device) (up{job=\"snmp_network\",device=~\"$device\"}))",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Devices Up",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "orange",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 3
+      },
+      "id": 2,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.1.5",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum(max by (device, ifName) (ifOperStatus{job=\"snmp_network\",device=~\"$device\",ifName=~\"$physical_interface\"} == 1))",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Physical Ports Up",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 3
+      },
+      "id": 3,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.1.5",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum((increase(ifInErrors{job=\"snmp_network\",device=~\"$device\",ifName=~\"$physical_interface\"}[$__range]) > 0) or (increase(ifOutErrors{job=\"snmp_network\",device=~\"$device\",ifName=~\"$physical_interface\"}[$__range]) > 0) or (increase(ifInDiscards{job=\"snmp_network\",device=~\"$device\",ifName=~\"$physical_interface\"}[$__range]) > 0) or (increase(ifOutDiscards{job=\"snmp_network\",device=~\"$device\",ifName=~\"$physical_interface\"}[$__range]) > 0))",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Ports With Error Activity",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 3
+      },
+      "id": 4,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.1.5",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum(max by (device, ifName) (ifOperStatus{job=\"snmp_network\",device=~\"$device\",ifName=~\"$physical_interface\",ifAlias!~\"^$|^Port .*|^SFP .*$\"} != 1))",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Named Ports Down",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 7
+      },
+      "id": 9,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": false,
+            "displayName": "Device"
+          },
+          {
+            "desc": false,
+            "displayName": "Interface"
+          }
+        ]
+      },
+      "pluginVersion": "11.1.5",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "ifOperStatus{job=\"snmp_network\",device=~\"UXGPro|switch-eg|switch-3og\",ifName=~\"^(eth2|eth3|0/17|0/18|0/25|0/26)$\"}",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Uplink Candidates",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "instance": true,
+              "job": true,
+              "vendor": true
+            },
+            "renameByName": {
+              "Value": "Oper Status",
+              "device": "Device",
+              "ifAlias": "Alias",
+              "ifDescr": "Description",
+              "ifIndex": "IfIndex",
+              "ifName": "Interface",
+              "role": "Role"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 18,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 3,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "unit": "bps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 7
+      },
+      "id": 10,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "width": 300
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "11.1.5",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "rate(ifHCInOctets{job=\"snmp_network\",device=~\"UXGPro|switch-eg|switch-3og\",ifName=~\"eth2|eth3|0/17|0/18|0/25|0/26\"}[5m]) * 8",
+          "legendFormat": "{{device}} {{ifName}} in",
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "rate(ifHCOutOctets{job=\"snmp_network\",device=~\"UXGPro|switch-eg|switch-3og\",ifName=~\"eth2|eth3|0/17|0/18|0/25|0/26\"}[5m]) * 8",
+          "legendFormat": "{{device}} {{ifName}} out",
+          "refId": "B"
+        }
+      ],
+      "title": "Uplink Candidate Throughput",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 15
+      },
+      "id": 11,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Total Activity"
+          }
+        ]
+      },
+      "pluginVersion": "11.1.5",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "label_replace(increase(ifInErrors{job=\"snmp_network\",device=~\"UXGPro|switch-eg|switch-3og\",ifName=~\"^(eth2|eth3|0/17|0/18|0/25|0/26)$\"}[$__range]), \"counter_type\", \"in_errors\", \"__name__\", \".*\") or label_replace(increase(ifOutErrors{job=\"snmp_network\",device=~\"UXGPro|switch-eg|switch-3og\",ifName=~\"^(eth2|eth3|0/17|0/18|0/25|0/26)$\"}[$__range]), \"counter_type\", \"out_errors\", \"__name__\", \".*\") or label_replace(increase(ifInDiscards{job=\"snmp_network\",device=~\"UXGPro|switch-eg|switch-3og\",ifName=~\"^(eth2|eth3|0/17|0/18|0/25|0/26)$\"}[$__range]), \"counter_type\", \"in_discards\", \"__name__\", \".*\") or label_replace(increase(ifOutDiscards{job=\"snmp_network\",device=~\"UXGPro|switch-eg|switch-3og\",ifName=~\"^(eth2|eth3|0/17|0/18|0/25|0/26)$\"}[$__range]), \"counter_type\", \"out_discards\", \"__name__\", \".*\")",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Uplink Candidate Errors And Discards",
+      "transformations": [
+        {
+          "id": "filterByValue",
+          "options": {
+            "filters": [
+              {
+                "config": {
+                  "id": "greater",
+                  "options": {
+                    "value": 0
+                  }
+                },
+                "fieldName": "Value"
+              }
+            ],
+            "match": "all",
+            "type": "include"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "instance": true,
+              "job": true,
+              "vendor": true
+            },
+            "renameByName": {
+              "Value": "Delta",
+              "counter_type": "Counter",
+              "device": "Device",
+              "ifAlias": "Alias",
+              "ifDescr": "Description",
+              "ifIndex": "IfIndex",
+              "ifName": "Interface",
+              "role": "Role"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 23
+      },
+      "id": 5,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": false,
+            "displayName": "Device"
+          },
+          {
+            "desc": false,
+            "displayName": "Interface"
+          }
+        ]
+      },
+      "pluginVersion": "11.1.5",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "ifOperStatus{job=\"snmp_network\",device=~\"$device\",ifName=~\"$physical_interface\"}",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Physical Port Inventory",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "instance": true,
+              "job": true,
+              "vendor": true
+            },
+            "renameByName": {
+              "Value": "Oper Status",
+              "device": "Device",
+              "ifAlias": "Alias",
+              "ifDescr": "Description",
+              "ifIndex": "IfIndex",
+              "ifName": "Interface",
+              "role": "Role"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 3,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "unit": "bps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 33
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "width": 280
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "11.1.5",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "topk(8, rate(ifHCInOctets{job=\"snmp_network\",device=~\"$device\",ifName=~\"$physical_interface\"}[5m]) * 8)",
+          "legendFormat": "{{device}} {{ifName}} in",
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "topk(8, rate(ifHCOutOctets{job=\"snmp_network\",device=~\"$device\",ifName=~\"$physical_interface\"}[5m]) * 8)",
+          "legendFormat": "{{device}} {{ifName}} out",
+          "refId": "B"
+        }
+      ],
+      "title": "Top Traffic Ports",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 55,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 4,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 33
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "width": 320
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "11.1.5",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "increase(ifInErrors{job=\"snmp_network\",device=~\"$device\",ifName=~\"$physical_interface\"}[5m]) != 0",
+          "legendFormat": "{{device}} {{ifName}} in-errors",
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "increase(ifOutErrors{job=\"snmp_network\",device=~\"$device\",ifName=~\"$physical_interface\"}[5m]) != 0",
+          "legendFormat": "{{device}} {{ifName}} out-errors",
+          "refId": "B"
+        },
+        {
+          "editorMode": "code",
+          "expr": "increase(ifInDiscards{job=\"snmp_network\",device=~\"$device\",ifName=~\"$physical_interface\"}[5m]) != 0",
+          "legendFormat": "{{device}} {{ifName}} in-discards",
+          "refId": "C"
+        },
+        {
+          "editorMode": "code",
+          "expr": "increase(ifOutDiscards{job=\"snmp_network\",device=~\"$device\",ifName=~\"$physical_interface\"}[5m]) != 0",
+          "legendFormat": "{{device}} {{ifName}} out-discards",
+          "refId": "D"
+        }
+      ],
+      "title": "Error Activity By Time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 43
+      },
+      "id": 8,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Total Activity"
+          }
+        ]
+      },
+      "pluginVersion": "11.1.5",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "label_replace(increase(ifInErrors{job=\"snmp_network\",device=~\"$device\",ifName=~\"$physical_interface\"}[$__range]), \"counter_type\", \"in_errors\", \"__name__\", \".*\") or label_replace(increase(ifOutErrors{job=\"snmp_network\",device=~\"$device\",ifName=~\"$physical_interface\"}[$__range]), \"counter_type\", \"out_errors\", \"__name__\", \".*\") or label_replace(increase(ifInDiscards{job=\"snmp_network\",device=~\"$device\",ifName=~\"$physical_interface\"}[$__range]), \"counter_type\", \"in_discards\", \"__name__\", \".*\") or label_replace(increase(ifOutDiscards{job=\"snmp_network\",device=~\"$device\",ifName=~\"$physical_interface\"}[$__range]), \"counter_type\", \"out_discards\", \"__name__\", \".*\")",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Error And Discard Summary",
+      "transformations": [
+        {
+          "id": "filterByValue",
+          "options": {
+            "filters": [
+              {
+                "config": {
+                  "id": "greater",
+                  "options": {
+                    "value": 0
+                  }
+                },
+                "fieldName": "Value"
+              }
+            ],
+            "match": "all",
+            "type": "include"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "instance": true,
+              "job": true,
+              "vendor": true
+            },
+            "renameByName": {
+              "Value": "Delta",
+              "counter_type": "Counter",
+              "device": "Device",
+              "ifAlias": "Alias",
+              "ifDescr": "Description",
+              "ifIndex": "IfIndex",
+              "ifName": "Interface",
+              "role": "Role"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": [
+    "measurepi",
+    "network",
+    "devices",
+    "snmp"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "definition": "label_values(up{job=\"snmp_network\"}, device)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Device",
+        "multi": true,
+        "name": "device",
+        "options": [],
+        "query": {
+          "query": "label_values(up{job=\"snmp_network\"}, device)",
+          "refId": "Prometheus-device-Variable-Query"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "definition": "label_values(ifOperStatus{job=\"snmp_network\",device=~\"$device\"}, ifName)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Physical Interface",
+        "multi": true,
+        "name": "physical_interface",
+        "options": [],
+        "query": {
+          "query": "label_values(ifOperStatus{job=\"snmp_network\",device=~\"$device\"}, ifName)",
+          "refId": "Prometheus-interface-Variable-Query"
+        },
+        "refresh": 1,
+        "regex": "/^(eth[0-9]+|0\\/[0-9]+)$/",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "MeasurePi Network Device Focus",
+  "uid": "measurepi-network-devices",
+  "version": 3,
+  "weekStart": ""
+}

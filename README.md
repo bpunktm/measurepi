@@ -12,7 +12,7 @@ Das Ziel ist bewusst nicht "allgemeines Monitoring", sondern Fehleranalyse aus e
 
 ## Architektur in einem Satz
 
-Der Pi misst lokal, `Prometheus` speichert die Zeitreihen, `Grafana` visualisiert sie, `Blackbox Exporter` prueft externe Ziele, `Node Exporter` liefert Host-Metriken, `wifi-exporter` sammelt WLAN- und Ausfallkontext, `kernel-log-exporter` wertet Kernel-/Storage-Hinweise aus und `tshark-exporter` liefert Zusatzsignale aus dem normalen Client-Traffic.
+Der Pi misst lokal, `Prometheus` speichert die Zeitreihen, `Grafana` visualisiert sie, `Blackbox Exporter` prueft externe Ziele, `Node Exporter` liefert Host-Metriken, `wifi-exporter` sammelt WLAN- und Ausfallkontext, `kernel-log-exporter` wertet Kernel-/Storage-Hinweise aus, `tshark-exporter` liefert Zusatzsignale aus dem normalen Client-Traffic und `snmp-exporter` holt optional Port- und Interface-Metriken von UXG Pro und Switches.
 
 ## Was der Stack heute kann
 
@@ -46,7 +46,7 @@ Der Pi misst lokal, `Prometheus` speichert die Zeitreihen, `Grafana` visualisier
 
 ## Dashboards
 
-Es gibt zwei vorprovisionierte Grafana-Dashboards:
+Es gibt mehrere vorprovisionierte Grafana-Dashboards:
 
 - `MeasurePi Overview`
   - Betriebsansicht fuer WLAN-/Gateway-/Internet-Status
@@ -58,7 +58,14 @@ Es gibt zwei vorprovisionierte Grafana-Dashboards:
   - aktuelle Connectivity-State-Tabelle
   - Kernel-Storage-Hinweise
   - `tshark`-basierte Client-Traffic-Hinweise
-
+- `MeasurePi Network Interfaces`
+  - generische SNMP-Sicht auf alle gescrapten Netzwerk-Interfaces
+  - geeignet fuer breite Ad-hoc-Analyse und freies Filtern nach Device, Rolle und Interface
+  - zeigt bewusst auch mehr Interface-Flaeche, nicht nur die wichtigsten Ports
+- `MeasurePi Network Device Focus`
+  - fokussierte Betriebsansicht fuer UXG Pro und die beiden Switches
+  - physische Ports statt logischer Interface-Flut
+  - Uplink-Kandidaten, benannte Ports und Fehleraktivitaet schnell sichtbar
 ## Raspberry-Pi-Hinweise
 
 - Der Basis-Stack startet ohne zusaetzliche Profile.
@@ -120,6 +127,7 @@ Ohne `.env` startet der Stack bereits mit sinnvollen Defaults.
 - `GATEWAY_TARGET`: optionales Override fuer das lokale Gateway
 - `INTERNET_PING_TARGET`: optionales Override fuer den externen ICMP-Test, Standard `1.1.1.1`
 - `HTTP_CHECK_URL`: optionales Override fuer den externen HTTP-Test, Standard `https://connectivitycheck.gstatic.com/generate_204`
+- `SNMP_COMMUNITY`: SNMP-v2c-Community fuer UXG Pro und Switches
 
 Wichtig dazu:
 
@@ -246,6 +254,43 @@ Wichtig:
 - Filesystem
 - RAM
 
+### `snmp-exporter`
+
+Der `snmp-exporter` sammelt optional Infrastruktur-Metriken von Router und Switches.
+
+Damit kannst du zusaetzlich zur Client-Sicht sehen:
+
+- ob ein Geraet per SNMP grundsaetzlich erreichbar ist
+- welche Interfaces administrativ aktiv, aber operativ down sind
+- wie sich Port-Durchsatz entwickelt
+- ob Errors oder Discards auf bestimmten Uplinks oder Access-Ports auftreten
+
+Die Zielgeraete pflegst du in:
+
+- [snmp/targets.yml](/Users/benedikt/Projekte/measurepi/snmp/targets.yml)
+
+Beispiel:
+
+```yaml
+- targets: ["192.168.1.1"]
+  labels:
+    device: uxg-pro
+    role: gateway
+    vendor: ubiquiti
+
+- targets: ["192.168.1.2"]
+  labels:
+    device: switch-core
+    role: switch
+    vendor: ubiquiti
+```
+
+Wichtig:
+
+- aktuell ist `SNMP v2c` vorgesehen
+- die Community kommt aus `SNMP_COMMUNITY`
+- das Dashboard ist bewusst generisch ueber Standard-Interface-MIBs gebaut, damit es fuer UXG Pro und Switches gleich funktioniert
+
 ### `smartctl-exporter` (optional)
 
 `smartctl-exporter` bleibt optional.
@@ -272,7 +317,7 @@ Fuer einen WLAN-Diagnose-Pi ist das sinnvoller als ein klassisches Bridge-Setup.
 
 ## Wie die Daten zusammenhaengen
 
-1. `wifi-exporter`, `kernel-log-exporter`, `tshark-exporter` und `node-exporter` liefern Metriken.
+1. `wifi-exporter`, `kernel-log-exporter`, `tshark-exporter`, `node-exporter` und optional `snmp-exporter` liefern Metriken.
 2. `blackbox-exporter` prueft externe Ziele.
 3. `Prometheus` sammelt alles in festen Intervallen ein.
 4. `Grafana` visualisiert Uebersichten und Ereignisdetails.
@@ -309,8 +354,12 @@ Mit dem aktuellen Setup kannst du typische Fehlerbilder deutlich besser trennen:
 - [containers/wifi-exporter/wifi_exporter.py](/Users/benedikt/Projekte/measurepi/containers/wifi-exporter/wifi_exporter.py): WLAN-/Event-/ARP-/DNS-Exporter
 - [containers/kernel-log-exporter/kernel_log_exporter.py](/Users/benedikt/Projekte/measurepi/containers/kernel-log-exporter/kernel_log_exporter.py): Kernel-/Storage-Fehlerauswertung
 - [containers/tshark-exporter/tshark_exporter.py](/Users/benedikt/Projekte/measurepi/containers/tshark-exporter/tshark_exporter.py): `tshark`-basierte Client-Traffic-Hinweise
+- [containers/snmp-exporter](/Users/benedikt/Projekte/measurepi/containers/snmp-exporter): SNMP-Exporter fuer UXG Pro und Switches
+- [snmp/targets.yml](/Users/benedikt/Projekte/measurepi/snmp/targets.yml): SNMP-Zielgeraete mit Labels
 - [grafana/dashboards/measurepi-overview.json](/Users/benedikt/Projekte/measurepi/grafana/dashboards/measurepi-overview.json): Uebersichts-Dashboard
 - [grafana/dashboards/measurepi-logs.json](/Users/benedikt/Projekte/measurepi/grafana/dashboards/measurepi-logs.json): Ereignis-/Logs-Dashboard
+- [grafana/dashboards/measurepi-network-snmp.json](/Users/benedikt/Projekte/measurepi/grafana/dashboards/measurepi-network-snmp.json): generische Interface-Sicht ueber SNMP
+- [grafana/dashboards/measurepi-network-devices.json](/Users/benedikt/Projekte/measurepi/grafana/dashboards/measurepi-network-devices.json): fokussierte Betriebsansicht fuer UXG Pro und Switches
 - [data](/Users/benedikt/Projekte/measurepi/data): persistente Host-Daten fuer Prometheus und den WLAN-Exporter
 - [scripts/prepare-data-dirs.sh](/Users/benedikt/Projekte/measurepi/scripts/prepare-data-dirs.sh): setzt die benoetigten Verzeichnisrechte fuer den ersten Start
 
@@ -344,6 +393,7 @@ docker compose logs -f wifi-exporter
 docker compose logs -f prometheus
 docker compose logs -f grafana
 docker compose logs -f tshark-exporter
+docker compose logs -f snmp-exporter
 ```
 
 Stack stoppen:

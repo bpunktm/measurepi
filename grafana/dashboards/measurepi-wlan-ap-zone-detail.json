@@ -1,0 +1,888 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "content": "Scope: Detailansicht fuer eine AP-Zone und einzelne APs. Dieses Dashboard fokussiert auf die gewaehlte Zone, den AP, das Band und die zugehoerigen SSIDs oder Radios.",
+        "mode": "markdown"
+      },
+      "pluginVersion": "11.1.5",
+      "title": "Scope",
+      "type": "text"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "orange",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 3
+      },
+      "id": 2,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.1.5",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum(max by (ap_name) (unifi_ap_scrape_success{role=\"ap\",zone=~\"${zone:regex}\",ap_name=~\"${ap:regex}\"}))",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "title": "AP Online",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "orange",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 3
+      },
+      "id": 3,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.1.5",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum(unifi_ap_ssid_clients{role=\"ap\",zone=~\"${zone:regex}\",ap_name=~\"${ap:regex}\",band=~\"${band:regex}\"})",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Clients",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "orange",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 3
+      },
+      "id": 4,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.1.5",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "max(unifi_ap_uptime_seconds{role=\"ap\",zone=~\"${zone:regex}\",ap_name=~\"${ap:regex}\"}) / 3600",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Uptime Hours",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "orange",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 3
+      },
+      "id": 5,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.1.5",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "max(unifi_ap_cpu_load_percent_avg{role=\"ap\",zone=~\"${zone:regex}\",ap_name=~\"${ap:regex}\"})",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "title": "CPU Avg",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 7
+      },
+      "id": 6,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "orientation": "horizontal",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "pluginVersion": "11.1.5",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by (ap_name, band) (unifi_ap_ssid_clients{role=\"ap\",zone=~\"${zone:regex}\",band=~\"${band:regex}\"})",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ],
+      "title": "Clients Per AP",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 7
+      },
+      "id": 7,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "11.1.5",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "unifi_ap_info{role=\"ap\",zone=~\"${zone:regex}\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ],
+      "title": "AP Table",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {}
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 15
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "11.1.5",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by (ap_name) (rate(unifi_ap_interface_in_octets_total{role=\"ap\",zone=~\"${zone:regex}\",ap_name=~\"${ap:regex}\",if_name=\"eth0\"}[5m]) * 8)",
+          "legendFormat": "{{ap_name}} in",
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "sum by (ap_name) (rate(unifi_ap_interface_out_octets_total{role=\"ap\",zone=~\"${zone:regex}\",ap_name=~\"${ap:regex}\",if_name=\"eth0\"}[5m]) * 8)",
+          "legendFormat": "{{ap_name}} out",
+          "refId": "B"
+        }
+      ],
+      "title": "Selected AP Throughput",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 15
+      },
+      "id": 9,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "11.1.5",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "unifi_ap_ssid_clients{role=\"ap\",zone=~\"${zone:regex}\",ap_name=~\"${ap:regex}\",band=~\"${band:regex}\"}",
+          "legendFormat": "{{ssid}} ({{band}})",
+          "refId": "A"
+        }
+      ],
+      "title": "Selected AP Clients By SSID",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 23
+      },
+      "id": 10,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "11.1.5",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "unifi_ap_cpu_load_percent_avg{role=\"ap\",zone=~\"${zone:regex}\",ap_name=~\"${ap:regex}\"}",
+          "legendFormat": "{{ap_name}} CPU",
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "unifi_ap_load_average{role=\"ap\",zone=~\"${zone:regex}\",ap_name=~\"${ap:regex}\",window=\"5m\"}",
+          "legendFormat": "{{ap_name}} load-5",
+          "refId": "B"
+        }
+      ],
+      "title": "CPU And Load",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "decmbytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 23
+      },
+      "id": 11,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "11.1.5",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "unifi_ap_memory_kilobytes{role=\"ap\",zone=~\"${zone:regex}\",ap_name=~\"${ap:regex}\",memory=\"avail\"} / 1024",
+          "legendFormat": "{{ap_name}} avail",
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "unifi_ap_memory_kilobytes{role=\"ap\",zone=~\"${zone:regex}\",ap_name=~\"${ap:regex}\",memory=\"cached\"} / 1024",
+          "legendFormat": "{{ap_name}} cached",
+          "refId": "B"
+        }
+      ],
+      "title": "Memory Available And Cached",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 31
+      },
+      "id": 12,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "11.1.5",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "unifi_ap_radio_info{role=\"ap\",zone=~\"${zone:regex}\",ap_name=~\"${ap:regex}\",band=~\"${band:regex}\",radio_name=~\"${radio:regex}\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ],
+      "title": "Radio Inventory",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {}
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 31
+      },
+      "id": 13,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "11.1.5",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "unifi_ap_ssid_clients{role=\"ap\",zone=~\"${zone:regex}\",ap_name=~\"${ap:regex}\",band=~\"${band:regex}\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ],
+      "title": "Selected AP SSIDs",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {}
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 39
+      },
+      "id": 14,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "11.1.5",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "unifi_ap_interface_oper_status{role=\"ap\",zone=~\"${zone:regex}\",ap_name=~\"${ap:regex}\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ],
+      "title": "Selected AP Interfaces",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {}
+        }
+      ],
+      "type": "table"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": [
+    "measurepi",
+    "wifi",
+    "ap"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": "EG",
+          "value": "EG"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "definition": "label_values(unifi_ap_info{role=\"ap\"}, zone)",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Zone",
+        "multi": false,
+        "name": "zone",
+        "options": [],
+        "query": {
+          "query": "label_values(unifi_ap_info{role=\"ap\"}, zone)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": ".*"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "definition": "label_values(unifi_ap_info{role=\"ap\",zone=~\"${zone:regex}\"}, ap_name)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "AP",
+        "multi": false,
+        "name": "ap",
+        "options": [],
+        "query": {
+          "query": "label_values(unifi_ap_info{role=\"ap\",zone=~\"${zone:regex}\"}, ap_name)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": ".*"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "definition": "label_values(unifi_ap_ssid_clients{role=\"ap\",zone=~\"${zone:regex}\",ap_name=~\"${ap:regex}\"}, band)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Band",
+        "multi": false,
+        "name": "band",
+        "options": [],
+        "query": {
+          "query": "label_values(unifi_ap_ssid_clients{role=\"ap\",zone=~\"${zone:regex}\",ap_name=~\"${ap:regex}\"}, band)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": ".*"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "definition": "label_values(unifi_ap_radio_info{role=\"ap\",zone=~\"${zone:regex}\",ap_name=~\"${ap:regex}\",band=~\"${band:regex}\"}, radio_name)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Radio",
+        "multi": false,
+        "name": "radio",
+        "options": [],
+        "query": {
+          "query": "label_values(unifi_ap_radio_info{role=\"ap\",zone=~\"${zone:regex}\",ap_name=~\"${ap:regex}\",band=~\"${band:regex}\"}, radio_name)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "MeasurePi WLAN AP Zone Detail",
+  "uid": "measurepi-wlan-ap-zone-detail",
+  "version": 1,
+  "weekStart": ""
+}

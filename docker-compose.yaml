@@ -11,6 +11,8 @@ services:
     volumes:
       - ./data/prometheus:/prometheus
       - ./prometheus/prometheus.yml.tmpl:/etc/prometheus/prometheus.yml.tmpl:ro
+      - ./snmp/targets.yml:/etc/prometheus/snmp-targets.yml:ro
+      - ./ap/targets.yml:/etc/prometheus/ap-targets.yml:ro
 
   grafana:
     image: grafana/grafana:11.1.5
@@ -37,6 +39,28 @@ services:
       - --config.file=/etc/blackbox_exporter/blackbox.yml
     volumes:
       - ./blackbox/blackbox.yml:/etc/blackbox_exporter/blackbox.yml:ro
+
+  snmp-exporter:
+    build:
+      context: ./containers/snmp-exporter
+    container_name: measurepi-snmp-exporter
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      SNMP_COMMUNITY: ${SNMP_COMMUNITY:-public}
+
+  unifi-ap-exporter:
+    build:
+      context: ./containers/unifi-ap-exporter
+    container_name: measurepi-unifi-ap-exporter
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      SNMP_COMMUNITY: ${SNMP_COMMUNITY:-public}
+      AP_TARGETS_FILE: /etc/measurepi/ap-targets.yml
+      EXPORTER_PORT: 9726
+    volumes:
+      - ./ap/targets.yml:/etc/measurepi/ap-targets.yml:ro
 
   wifi-exporter:
     build:

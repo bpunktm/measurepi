@@ -1,2 +1,7 @@
 .env
-
+unifimonitoring.md
+docker-compose.gateway.yaml
+containers/gateway-exporter/
+containers/gateway-snmp-exporter/
+grafana/dashboards/measurepi-gateway.json
+grafana/dashboards/measurepi-correlation.json

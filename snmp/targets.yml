@@ -1,0 +1,17 @@
+- targets: ["10.18.0.1"]
+  labels:
+    device: UXGPro
+    role: gateway
+    vendor: ubiquiti
+
+- targets: ["10.18.0.11"]
+  labels:
+    device: switch-eg
+    role: switch
+    vendor: ubiquiti
+
+- targets: ["10.18.0.21"]
+  labels:
+    device: switch-3og
+    role: switch
+    vendor: ubiquiti
