@@ -1,303 +1,233 @@
 # MeasurePi
 
-`MeasurePi` ist ein lokaler Diagnose-Stack fuer einen Raspberry Pi, der sich wie ein normaler WLAN-Client in das betroffene Netz einbucht und dort dauerhaft misst.
+`MeasurePi` ist ein lokaler Monitoring- und Diagnose-Stack fuer einen Raspberry Pi in einem realen Netz.
 
-Das Ziel ist bewusst nicht "allgemeines Monitoring", sondern Fehleranalyse aus echter Client-Sicht:
+Der Stack ist heute nicht mehr nur ein WLAN-Client-Messer, sondern eine Kombination aus:
 
-- Ist das WLAN selbst weg?
-- Ist nur das Gateway nicht erreichbar?
-- Ist das Internet weg, obwohl WLAN und Gateway noch funktionieren?
-- Gibt es Roaming-Ereignisse oder BSSID-Wechsel genau zu dem Zeitpunkt, an dem Nutzer Probleme melden?
-- Ist der Pi selbst vielleicht thermisch, CPU-seitig oder storage-seitig angeschlagen?
+- Pi-Host-Health
+- Internet-/HTTP-Reachability
+- WLAN-Client-Sicht des Pi, sofern genutzt
+- SNMP-Monitoring fuer Gateway und Switches
+- UniFi-AP-Monitoring per SNMP
 
-## Architektur in einem Satz
+Die zentrale Idee bleibt: nicht nur sehen, dass "irgendwas rot ist", sondern moeglichst sauber trennen, ob das Problem am Pi, an der lokalen Infrastruktur, an den APs oder am externen Uplink liegt.
 
-Der Pi misst lokal, `Prometheus` speichert die Zeitreihen, `Grafana` visualisiert sie, `Blackbox Exporter` prueft externe Ziele, `Node Exporter` liefert Host-Metriken, `wifi-exporter` sammelt WLAN- und Ausfallkontext, `kernel-log-exporter` wertet Kernel-/Storage-Hinweise aus, `tshark-exporter` liefert Zusatzsignale aus dem normalen Client-Traffic und `snmp-exporter` holt optional Port- und Interface-Metriken von UXG Pro und Switches.
+## Aktueller Scope
 
-## Was der Stack heute kann
+Der Stack deckt heute vor allem diese Bereiche ab:
 
-- WLAN-Verbindung aus Client-Sicht messen
-- Gateway-, Internet-, HTTP-, DNS- und ARP-Hinweise korrelieren
-- Disconnects, Roams, Gateway-Outages und Internet-Outages als Ereignisse zaehlen
-- Ereignisse mit Kontext speichern:
-  - Zeit
-  - Event-Typ
-  - SSID
-  - BSSID / AP
-  - RSSI
-  - Frequenz
-  - TX/RX-Bitrate
-  - Gateway
-  - Reason Guess
-  - ARP/DNS/HTTP-Kontext
-  - Outage-Dauer, sofern bekannt
-- Host-Zustand des Pi beobachten:
+- Pi-Zustand:
   - CPU
   - Load
   - Temperatur
   - Filesystem
-- Kernel-/Storage-Warnhinweise zaehlen
-- normalen Client-Traffic via `tshark` auswerten:
-  - ARP
-  - DNS
-  - DHCP
-  - ICMP
-  - TCP-Retransmits
+  - Kernel-/Storage-Hinweise
+- externe Erreichbarkeit:
+  - ICMP zu einem Internet-Ziel
+  - HTTP-Check zu einem Referenzziel
+- Netzwerk-Infrastruktur via SNMP:
+  - UXG Pro
+  - Switches
+  - Interface-Status, Durchsatz, Errors, Discards
+- UniFi-Access-Points:
+  - Online-Status
+  - Zonen EG / OG3
+  - Clients
+  - CPU / Memory / Load
+  - Uplink-Traffic
+  - Radio-/SSID-nahe Metriken
+- optionale WLAN-Client-Sicht des Pi:
+  - SSID / BSSID
+  - RSSI
+  - Roams
+  - Disconnects
+  - Gateway-/Internet-Ereignisse aus Sicht des Pi
+
+## Architektur in einem Satz
+
+Der Pi sammelt lokal Host-, WLAN- und Event-Signale, `Prometheus` speichert Zeitreihen, `Grafana` visualisiert, `Blackbox Exporter` prueft externe Ziele, `snmp-exporter` sammelt Standard-SNMP fuer Netzgeraete und `unifi-ap-exporter` uebersetzt UniFi-AP-OIDs in Prometheus-Metriken.
+
+## Aktive Services
+
+Der Haupt-Stack in [docker-compose.yaml](/Users/benedikt/Projekte/measurepi/docker-compose.yaml) besteht aktuell aus:
+
+- `prometheus`
+- `grafana`
+- `blackbox-exporter`
+- `snmp-exporter`
+- `unifi-ap-exporter`
+- `wifi-exporter`
+- `tshark-exporter`
+- `kernel-log-exporter`
+- `node-exporter`
+- optional `smartctl-exporter`
 
 ## Dashboards
 
-Es gibt mehrere vorprovisionierte Grafana-Dashboards:
+Aktuell werden diese Grafana-Dashboards ausgeliefert:
 
-- `MeasurePi Overview`
-  - Betriebsansicht fuer WLAN-/Gateway-/Internet-Status
-  - Signalstaerke, Bitrate, Latenzen
-  - Event-Zaehler fuer Disconnects, Roams, Gateway- und Internet-Outages
+- `MeasurePi 01 Overview`
+  - transport-agnostische Startseite
+  - Pi-, Internet-, Infrastruktur- und AP-Gesundheit
+  - Outage-Sicht fuer Internet und Gateway-Geraet
 - `MeasurePi Logs`
-  - juengste Connectivity-Incidents als Tabelle
-  - Reason Guess / Detailtiefe
-  - aktuelle Connectivity-State-Tabelle
-  - Kernel-Storage-Hinweise
-  - `tshark`-basierte Client-Traffic-Hinweise
-- `MeasurePi Network Interfaces`
-  - generische SNMP-Sicht auf alle gescrapten Netzwerk-Interfaces
-  - geeignet fuer breite Ad-hoc-Analyse und freies Filtern nach Device, Rolle und Interface
-  - zeigt bewusst auch mehr Interface-Flaeche, nicht nur die wichtigsten Ports
+  - bestehende Event-/Incident-Sicht aus der WLAN-Client-Logik
+  - eher Ereignis-/Troubleshooting-Board als Startseite
 - `MeasurePi Network Device Focus`
-  - fokussierte Betriebsansicht fuer UXG Pro und die beiden Switches
-  - physische Ports statt logischer Interface-Flut
-  - Uplink-Kandidaten, benannte Ports und Fehleraktivitaet schnell sichtbar
-## Raspberry-Pi-Hinweise
+  - fokussierte Betriebsansicht fuer UXG Pro und Switches
+  - physische Ports, Uplinks, Fehleraktivitaet
+- `MeasurePi Network Interface Explorer`
+  - generische SNMP-Interface-Sicht
+  - fuer Ad-hoc-Analyse und freies Filtern
+- `MeasurePi WLAN AP Overview`
+  - schnelle Lage fuer alle UniFi-APs
+  - Online-Status, Zonen, Clients, CPU, Uplink-Traffic
+- `MeasurePi WLAN AP Zone Detail`
+  - Detailansicht fuer Zone / AP / Band / Radio
 
-- Der Basis-Stack startet ohne zusaetzliche Profile.
-- `smartctl-exporter` bleibt optional, weil viele SD-Karten und USB-Sticks kein brauchbares SMART liefern.
-- Grafana speichert seine interne SQLite-Datenbank absichtlich in einem Docker-Volume statt in einem Host-Bind-Mount. Das ist auf dem Pi deutlich robuster.
+Entfernt wurden:
 
-## Persistente Daten
+- `MeasurePi Correlation`
+- `MeasurePi Gateway`
 
-Die dauerhaften Host-Daten liegen bewusst sichtbar im Projekt:
-
-- [data/prometheus](/Users/benedikt/Projekte/measurepi/data/prometheus): Prometheus-Zeitreihen
-- [data/wifi-exporter](/Users/benedikt/Projekte/measurepi/data/wifi-exporter): `events.log` und `state.json`
-
-Warum das wichtig ist:
-
-- Die Messhistorie liegt nicht versteckt in anonymen Docker-Volumes.
-- Du kannst Ereignislog und Prometheus-Daten leicht sichern oder inspizieren.
-- Reboots verlieren weder Zeitreihen noch die Event-Historie des `wifi-exporter`.
-
-Ausnahme:
-
-- Grafanas interne DB liegt in einem Docker-Volume `grafana_data`.
-
-Warum:
-
-- deutlich robuster als ein bind-gemounteter SQLite-Pfad auf dem Pi
-- vermeidet Rechteprobleme rund um `GF_PATHS_DATA`
-- Dashboards und Provisioning bleiben trotzdem versioniert im Repo
+Beide wurden als Legacy entfernt, weil sie auf alten oder heute nicht mehr aktiven Datenpfaden aufbauten.
 
 ## Schnellstart
 
-1. Projekt nach `/opt/measurepi` kopieren.
-2. Datenordner vorbereiten:
+1. Projekt nach `/opt/measurepi` kopieren
+2. Datenordner vorbereiten
+3. Stack bauen und starten
 
 ```bash
 cd /opt/measurepi
 sh ./scripts/prepare-data-dirs.sh
-```
-
-3. Optional `.env.example` nach `.env` kopieren und nur dann anpassen, wenn du vom Standard abweichen willst.
-4. Stack starten:
-
-```bash
-cd /opt/measurepi
 docker compose up -d --build
 ```
 
-5. Grafana oeffnen: `http://<pi-ip>:3000`
-6. Prometheus oeffnen: `http://<pi-ip>:9090`
+Danach:
 
-Ohne `.env` startet der Stack bereits mit sinnvollen Defaults.
+- Grafana: `http://<pi-ip>:3000`
+- Prometheus: `http://<pi-ip>:9090`
 
-## Optionale Konfiguration ueber `.env`
+## Konfiguration
 
-- `WIFI_INTERFACE`: WLAN-Interface des Pi, meist `wlan0`
-- `DNS_CHECK_HOST`: Host fuer den DNS-Test, Standard `connectivitycheck.gstatic.com`
-- `GF_SECURITY_ADMIN_USER`: Grafana-Login
-- `GF_SECURITY_ADMIN_PASSWORD`: Grafana-Passwort
-- `GATEWAY_TARGET`: optionales Override fuer das lokale Gateway
-- `INTERNET_PING_TARGET`: optionales Override fuer den externen ICMP-Test, Standard `1.1.1.1`
-- `HTTP_CHECK_URL`: optionales Override fuer den externen HTTP-Test, Standard `https://connectivitycheck.gstatic.com/generate_204`
-- `SNMP_COMMUNITY`: SNMP-v2c-Community fuer UXG Pro und Switches
+Im Produktivbetrieb kann der Stack komplett ohne `.env` laufen.
 
-Wichtig dazu:
+Es gibt bewusst nur eine [.env.example](/Users/benedikt/Projekte/measurepi/.env.example) als kleine Override-Referenz. Wenn du nichts anpasst, greifen die Defaults aus `docker-compose.yaml`.
 
-- `WIFI_INTERFACE` ist nur relevant, wenn dein Mess-Interface nicht `wlan0` ist.
-- `GATEWAY_TARGET` ist normalerweise nicht noetig, weil der `wifi-exporter` das Gateway direkt aus der Routing-Tabelle des Pi liest.
-- `DNS_CHECK_HOST`, `INTERNET_PING_TARGET` und `HTTP_CHECK_URL` haben brauchbare Defaults und muessen nur geaendert werden, wenn du bewusst andere Referenzziele willst.
-- Die aktive SSID wird live vom Interface gelesen. Du musst sie nicht in `.env` doppelt pflegen.
+Aktuell relevante Variablen sind:
 
-Minimalbeispiel fuer einen USB-WLAN-Adapter:
+- `GF_SECURITY_ADMIN_USER`
+  - Benutzername fuer den Grafana-Login
+- `GF_SECURITY_ADMIN_PASSWORD`
+  - Passwort fuer den Grafana-Login
+- `SNMP_COMMUNITY`
+  - Community fuer `snmp-exporter` und `unifi-ap-exporter`
+- `WIFI_INTERFACE`
+  - Standard: `wlan0`
+  - nur relevant, wenn der Pi aktiv ueber WLAN misst oder ein anderes WLAN-Interface genutzt wird
+- `INTERNET_PING_TARGET`
+  - Standard: `1.1.1.1`
+- `HTTP_CHECK_URL`
+  - Standard: `https://connectivitycheck.gstatic.com/generate_204`
+- `DNS_CHECK_HOST`
+  - Standard: `connectivitycheck.gstatic.com`
+  - nur relevant fuer die WLAN-Client-Sicht des `wifi-exporter`
+- `GATEWAY_TARGET`
+  - optionales Override, falls der `wifi-exporter` das Gateway nicht aus der Routing-Tabelle ableiten soll
+
+Die `.env.example` ist damit vor allem Dokumentation der moeglichen Overrides und kein zwingender Schritt fuer den Normalbetrieb.
+
+Beispiel nur dann, wenn du wirklich abweichst:
 
 ```bash
 WIFI_INTERFACE=wlan1
+SNMP_COMMUNITY=monitoring
 ```
 
-## Andere WLAN-Hardware als `wlan0`
+## Persistente Daten
 
-Der Stack ist bewusst so gebaut, dass nicht zwingend der interne WLAN-Chip des Raspberry Pi genutzt werden muss.
+Die wichtigsten Host-Daten liegen sichtbar im Projekt:
 
-Wenn du stattdessen einen USB-WLAN-Adapter oder eine andere Karte verwendest:
+- [data/prometheus](/Users/benedikt/Projekte/measurepi/data/prometheus)
+- [data/wifi-exporter](/Users/benedikt/Projekte/measurepi/data/wifi-exporter)
 
-```bash
-WIFI_INTERFACE=wlan1
-```
+Grafanas interne Datenbank liegt absichtlich im Docker-Volume `grafana_data`, nicht in einem Host-Bind-Mount.
 
-oder zum Beispiel:
+## SNMP fuer Infrastruktur
 
-```bash
-WIFI_INTERFACE=wlp0s20f3
-```
-
-Wichtig ist nur, dass genau dieses Interface auf dem Host mit dem Ziel-WLAN verbunden ist. Der Stack beobachtet dann genau diese echte Client-Verbindung.
-
-## Aufbau des Compose-Stacks
-
-### `prometheus`
-
-`Prometheus` ist der Zeitreihenspeicher.
-
-Es:
-
-- scraped alle Exporter
-- speichert die Messwerte lokal auf dem Pi
-- fuehrt die Blackbox-Probes fuer externe ICMP- und HTTP-Ziele aus
-
-Die Zeitreihen landen persistent in `./data/prometheus`.
-
-### `grafana`
-
-`Grafana` ist die Visualisierungsschicht.
-
-Es:
-
-- provisioniert `Prometheus` als Datenquelle
-- laedt beide Dashboards automatisch
-- setzt `MeasurePi Overview` als Startseite nach dem Login
-
-Grafanas DB lebt bewusst im Docker-Volume `grafana_data`.
-
-### `blackbox-exporter`
-
-Der `Blackbox Exporter` prueft externe Netzwerkpfade:
-
-- Internet-ICMP
-- HTTP-Ziel
-
-Damit trennst du lokale WLAN-/LAN-Probleme von externen Upstream-Problemen.
-
-### `wifi-exporter`
-
-Der `wifi-exporter` ist das Herzstueck des Projekts.
-
-Er sammelt direkt aus Sicht des WLAN-Clients:
-
-- SSID
-- BSSID / AP
-- RSSI
-- Kanal / Frequenz
-- TX/RX-Bitrate
-- Gateway-Erreichbarkeit
-- Internet-Erreichbarkeit
-- HTTP-Erreichbarkeit
-- DNS-Erfolg
-- ARP-Hinweis auf das Gateway
-- Disconnects
-- Roams
-- Gateway- und Internet-Outages
-
-Er schreibt ausserdem Ereignisse mit Kontext nach:
-
-- [data/wifi-exporter/events.log](/Users/benedikt/Projekte/measurepi/data/wifi-exporter)
-- [data/wifi-exporter/state.json](/Users/benedikt/Projekte/measurepi/data/wifi-exporter)
-
-### `kernel-log-exporter`
-
-Der `kernel-log-exporter` wertet `dmesg` nach typischen Storage-/Kernel-Fehlermustern aus.
-
-Das ist auf Pi-/USB-/SD-Setups oft nuetzlicher als klassisches SMART.
-
-### `tshark-exporter`
-
-Der `tshark-exporter` beobachtet den normalen Client-Traffic auf dem aktiven WLAN-Interface.
-
-Er liefert Zusatzhinweise fuer:
-
-- ARP
-- DNS
-- DHCP
-- ICMP
-- TCP-Retransmits
-
-Wichtig:
-
-- Das ist kein Monitor-Mode-Sniffer.
-- Er sieht keine WLAN-Management-Frames wie `deauth` oder `reassoc`.
-- Er ist trotzdem nuetzlich, um Client-Symptome auf Layer 2.5/3/4 besser einzuordnen.
-
-### `node-exporter`
-
-`Node Exporter` liefert Host-Metriken des Pi:
-
-- CPU
-- Load
-- Temperatur
-- Filesystem
-- RAM
-
-### `snmp-exporter`
-
-Der `snmp-exporter` sammelt optional Infrastruktur-Metriken von Router und Switches.
-
-Damit kannst du zusaetzlich zur Client-Sicht sehen:
-
-- ob ein Geraet per SNMP grundsaetzlich erreichbar ist
-- welche Interfaces administrativ aktiv, aber operativ down sind
-- wie sich Port-Durchsatz entwickelt
-- ob Errors oder Discards auf bestimmten Uplinks oder Access-Ports auftreten
-
-Die Zielgeraete pflegst du in:
+Die Infrastruktur-Ziele pflegst du in:
 
 - [snmp/targets.yml](/Users/benedikt/Projekte/measurepi/snmp/targets.yml)
 
 Beispiel:
 
 ```yaml
-- targets: ["192.168.1.1"]
+- targets: ["10.18.0.1"]
   labels:
-    device: uxg-pro
+    device: UXGPro
     role: gateway
     vendor: ubiquiti
 
-- targets: ["192.168.1.2"]
+- targets: ["10.18.0.11"]
   labels:
-    device: switch-core
+    device: switch-eg
     role: switch
     vendor: ubiquiti
 ```
 
+Der `snmp-exporter` nutzt aktuell Standard-Interface-MIBs fuer eine moeglichst generische Sicht auf Router und Switches.
+
+## SNMP fuer UniFi-APs
+
+Die AP-Ziele pflegst du in:
+
+- [ap/targets.yml](/Users/benedikt/Projekte/measurepi/ap/targets.yml)
+
+Der eigene [unifi_ap_exporter.py](/Users/benedikt/Projekte/measurepi/containers/unifi-ap-exporter/unifi_ap_exporter.py) sammelt gezielt UniFi- und AP-nahe OIDs und macht daraus Prometheus-Metriken fuer:
+
+- AP-Info
+- Online-Status
+- CPU / Memory / Load
+- Interface-Metriken
+- Radios
+- SSIDs
+- Client-Zahlen
+
+## WLAN-Client-Sicht des Pi
+
+Der `wifi-exporter` ist weiterhin Teil des Projekts, aber nicht mehr die einzige Hauptperspektive.
+
+Er ist nuetzlich, wenn der Pi absichtlich als echter WLAN-Client mitmisst und liefert dann unter anderem:
+
+- SSID
+- BSSID
+- RSSI
+- Frequenz
+- TX/RX-Bitrate
+- Disconnects
+- Roams
+- Gateway-/Internet-Ausfaelle aus Sicht des Pi
+
 Wichtig:
 
-- aktuell ist `SNMP v2c` vorgesehen
-- die Community kommt aus `SNMP_COMMUNITY`
-- das Dashboard ist bewusst generisch ueber Standard-Interface-MIBs gebaut, damit es fuer UXG Pro und Switches gleich funktioniert
+- Das neue `MeasurePi 01 Overview` behandelt fehlendes WLAN nicht mehr automatisch als Fehler.
+- Wenn der Pi per Ethernet angebunden ist, bleiben WLAN-spezifische Erkenntnisse auf die spezialisierten Exporter/Dashboards begrenzt.
 
-### `smartctl-exporter` (optional)
+## Blackbox-Checks
 
-`smartctl-exporter` bleibt optional.
+Der `blackbox-exporter` prueft aktuell:
 
-Er ist vor allem dann interessant, wenn statt SD-Karte/USB-Stick eher USB-SSD- oder SATA-basierte Medien mit brauchbarer SMART-Unterstuetzung genutzt werden.
+- externes ICMP
+- externes HTTP
 
-Aktivierung nur wenn gewuenscht:
+Diese Signale fliessen in das `Overview` ein und helfen dabei, lokale Infrastrukturprobleme von Upstream-/Internetproblemen zu trennen.
+
+## Optionale Services
+
+### `smartctl-exporter`
+
+Bleibt optional und wird nur ueber das Profil `smartctl` gestartet:
 
 ```bash
 docker compose --profile smartctl up -d
@@ -305,116 +235,32 @@ docker compose --profile smartctl up -d
 
 ## Warum `network_mode: host`
 
-Alle Services laufen mit `network_mode: host`.
+Alle Services laufen mit `network_mode: host`, damit:
 
-Der Grund:
-
-- keine Docker-NAT-Schicht zwischen Messung und Host
-- moeglichst echte Client-Sicht
-- Exporter direkt ueber `localhost` erreichbar
-
-Fuer einen WLAN-Diagnose-Pi ist das sinnvoller als ein klassisches Bridge-Setup.
-
-## Wie die Daten zusammenhaengen
-
-1. `wifi-exporter`, `kernel-log-exporter`, `tshark-exporter`, `node-exporter` und optional `snmp-exporter` liefern Metriken.
-2. `blackbox-exporter` prueft externe Ziele.
-3. `Prometheus` sammelt alles in festen Intervallen ein.
-4. `Grafana` visualisiert Uebersichten und Ereignisdetails.
-
-Der eigentliche Mehrwert ist:
-
-- nicht nur "es fuehlt sich schlecht an"
-- sondern "um 14:07 war das WLAN noch verbunden, ARP aufs Gateway war da, aber ICMP aufs Gateway fehlte, kurz darauf wurde das Gateway wieder erreichbar"
-
-## Was der Stack diagnostisch beantworten kann
-
-Mit dem aktuellen Setup kannst du typische Fehlerbilder deutlich besser trennen:
-
-- `WLAN disconnected`
-  - Funkproblem, Assoziation, Roaming oder AP-Ausfall
-- `WLAN verbunden, Gateway nicht erreichbar`
-  - lokales Netz, Airtime, Bridge-/Switch-/AP-Problem
-- `Gateway per ARP sichtbar, aber kein ICMP`
-  - Gateway / lokaler Pfad antwortet nicht auf IP-Ebene
-- `Gateway okay, DNS nicht`
-  - DNS-spezifisches Problem
-- `Gateway okay, DNS okay, HTTP nicht`
-  - Upstream-/HTTP-Pfadproblem
-- `viele AP-Wechsel`
-  - Roaming-Tuning, Zellgroesse, Sendeleistung, Kanalplanung
-- `schlechte Bitrate trotz brauchbarem Signal`
-  - Interferenz, Airtime-Last, PHY-/MCS-Thema
+- die Messungen moeglichst nah an der Host-Realitaet bleiben
+- keine Docker-NAT-Schicht zwischen Messung und Ziel liegt
+- Exporter direkt ueber `localhost` erreichbar sind
 
 ## Dateien im Repo
 
-- [docker-compose.yaml](/Users/benedikt/Projekte/measurepi/docker-compose.yaml): gesamter Stack
-- [prometheus/prometheus.yml.tmpl](/Users/benedikt/Projekte/measurepi/prometheus/prometheus.yml.tmpl): Prometheus-Scrapes
-- [blackbox/blackbox.yml](/Users/benedikt/Projekte/measurepi/blackbox/blackbox.yml): Blackbox-Module
-- [containers/wifi-exporter/wifi_exporter.py](/Users/benedikt/Projekte/measurepi/containers/wifi-exporter/wifi_exporter.py): WLAN-/Event-/ARP-/DNS-Exporter
-- [containers/kernel-log-exporter/kernel_log_exporter.py](/Users/benedikt/Projekte/measurepi/containers/kernel-log-exporter/kernel_log_exporter.py): Kernel-/Storage-Fehlerauswertung
-- [containers/tshark-exporter/tshark_exporter.py](/Users/benedikt/Projekte/measurepi/containers/tshark-exporter/tshark_exporter.py): `tshark`-basierte Client-Traffic-Hinweise
-- [containers/snmp-exporter](/Users/benedikt/Projekte/measurepi/containers/snmp-exporter): SNMP-Exporter fuer UXG Pro und Switches
-- [snmp/targets.yml](/Users/benedikt/Projekte/measurepi/snmp/targets.yml): SNMP-Zielgeraete mit Labels
-- [grafana/dashboards/measurepi-overview.json](/Users/benedikt/Projekte/measurepi/grafana/dashboards/measurepi-overview.json): Uebersichts-Dashboard
-- [grafana/dashboards/measurepi-logs.json](/Users/benedikt/Projekte/measurepi/grafana/dashboards/measurepi-logs.json): Ereignis-/Logs-Dashboard
-- [grafana/dashboards/measurepi-network-snmp.json](/Users/benedikt/Projekte/measurepi/grafana/dashboards/measurepi-network-snmp.json): generische Interface-Sicht ueber SNMP
-- [grafana/dashboards/measurepi-network-devices.json](/Users/benedikt/Projekte/measurepi/grafana/dashboards/measurepi-network-devices.json): fokussierte Betriebsansicht fuer UXG Pro und Switches
-- [data](/Users/benedikt/Projekte/measurepi/data): persistente Host-Daten fuer Prometheus und den WLAN-Exporter
-- [scripts/prepare-data-dirs.sh](/Users/benedikt/Projekte/measurepi/scripts/prepare-data-dirs.sh): setzt die benoetigten Verzeichnisrechte fuer den ersten Start
+- [docker-compose.yaml](/Users/benedikt/Projekte/measurepi/docker-compose.yaml)
+- [prometheus/prometheus.yml.tmpl](/Users/benedikt/Projekte/measurepi/prometheus/prometheus.yml.tmpl)
+- [blackbox/blackbox.yml](/Users/benedikt/Projekte/measurepi/blackbox/blackbox.yml)
+- [containers/wifi-exporter/wifi_exporter.py](/Users/benedikt/Projekte/measurepi/containers/wifi-exporter/wifi_exporter.py)
+- [containers/unifi-ap-exporter/unifi_ap_exporter.py](/Users/benedikt/Projekte/measurepi/containers/unifi-ap-exporter/unifi_ap_exporter.py)
+- [containers/kernel-log-exporter/kernel_log_exporter.py](/Users/benedikt/Projekte/measurepi/containers/kernel-log-exporter/kernel_log_exporter.py)
+- [containers/tshark-exporter/tshark_exporter.py](/Users/benedikt/Projekte/measurepi/containers/tshark-exporter/tshark_exporter.py)
+- [containers/snmp-exporter](/Users/benedikt/Projekte/measurepi/containers/snmp-exporter)
+- [snmp/targets.yml](/Users/benedikt/Projekte/measurepi/snmp/targets.yml)
+- [ap/targets.yml](/Users/benedikt/Projekte/measurepi/ap/targets.yml)
+- [grafana/dashboards](/Users/benedikt/Projekte/measurepi/grafana/dashboards)
+- [scripts/generate_ap_dashboards.py](/Users/benedikt/Projekte/measurepi/scripts/generate_ap_dashboards.py)
+- [scripts/prepare-data-dirs.sh](/Users/benedikt/Projekte/measurepi/scripts/prepare-data-dirs.sh)
 
-## Betriebshinweise
+## Was als Naechstes sinnvoll ist
 
-- Der Pi sollte physisch genau dort stehen, wo Nutzer Probleme melden.
-- Der Pi sollte bewusst per WLAN angebunden sein, nicht per LAN.
-- Fuer eine brauchbare Aussage solltest du mindestens 24 bis 48 Stunden messen.
-- Notiere dir ungefaehre Beschwerdezeiten von Nutzern, damit du spaeter gezielt im Dashboard dagegenhalten kannst.
+Offene sinnvolle Ausbaupunkte sind aktuell:
 
-## Start und Betrieb
-
-Stack bauen und starten:
-
-```bash
-cd /opt/measurepi
-sh ./scripts/prepare-data-dirs.sh
-docker compose up -d --build
-```
-
-Status pruefen:
-
-```bash
-docker compose ps
-```
-
-Logs ansehen:
-
-```bash
-docker compose logs -f wifi-exporter
-docker compose logs -f prometheus
-docker compose logs -f grafana
-docker compose logs -f tshark-exporter
-docker compose logs -f snmp-exporter
-```
-
-Stack stoppen:
-
-```bash
-docker compose down
-```
-
-## Reboot- und Wiederanlauf-Verhalten
-
-Bei normalem Reboot oder versehentlichem Stromverlust gilt:
-
-- Die Daten in `data/` bleiben erhalten.
-- Prometheus und die Exporter kommen wieder hoch, solange die Rechte in `data/` stimmen.
-- Du musst keine `data/grafana`-Struktur pflegen, weil Grafana in einem Docker-Volume lebt.
-
-Wenn du Grafana bewusst frisch zuruecksetzen willst:
-
-```bash
-cd /opt/measurepi
-docker compose down
-docker volume rm measurepi_grafana_data
-docker compose up -d
-```
+- `MeasurePi Logs` fachlich auf die neue Architektur nachziehen
+- echte Event-/Syslog-Quellen spaeter als Log-Schicht anbinden
+- `unifi_ap_uptime_seconds` im AP-Exporter noch sauber nachziehen
